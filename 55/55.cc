@@ -4,7 +4,7 @@
 
 using namespace std;
 
-vector<int> GetSumOfSelfAndReverse(vector<int> n)
+vector<int> GetSumOfSelfAndReverse(const vector<int> &n)
 {
     vector<int> toReturn;
     bool carryOver = false;
@@ -34,7 +34,7 @@ vector<int> GetSumOfSelfAndReverse(vector<int> n)
     return toReturn;
 }
 
-bool IsPalindrome(vector<int> n)
+bool IsPalindrome(const vector<int> &n)
 {
     for (int i=0; i<n.size()/2; ++i)
     {
@@ -47,7 +47,7 @@ bool IsPalindrome(vector<int> n)
     return true;
 }
 
-bool IsLychrelNumber(vector<int> n, int depth)
+bool IsLychrelNumber(const vector<int> &n, int depth)
 {
     vector<int> sumOfNAndReverse = GetSumOfSelfAndReverse(n);
 
@@ -88,12 +88,7 @@ bool IsLychrelNumber(int n)
 {
     vector<int> vectorizedN = ConvertToVector(n);
 
-    if (IsLychrelNumber(vectorizedN, 0))
-    {
-        return true;
-    }
-
-    return false;
+    return IsLychrelNumber(vectorizedN, 0);
 }
 
 int CountLychrelNumbers(int n)
