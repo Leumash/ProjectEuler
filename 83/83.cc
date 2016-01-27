@@ -127,12 +127,12 @@ map<int,int> SetEachVerticeToInfinity(set<int> vertices)
     return toReturn;
 }
 
-int GetMinimumDistanceVertex(set<int> vertices, map<int,int> distances)
+int GetMinimumDistanceVertex(const set<int> &vertices, map<int,int> &distances)
 {
     int minimum = numeric_limits<int>::max();
     int minimumDistanceVertex = -1;
 
-    for (set<int>::iterator sit = vertices.begin(); sit != vertices.end(); ++sit)
+    for (set<int>::const_iterator sit = vertices.begin(); sit != vertices.end(); ++sit)
     {
         if (distances[*sit] < minimum)
         {
@@ -203,7 +203,7 @@ map<int,int> DijkstrasAlgorithm(DirectedGraph graph, int start)
    22     return dist[], prev[]
 */
 
-int DijkstrasAlgorithm(DirectedGraph graph, int start, int destination)
+int DijkstrasAlgorithm(const DirectedGraph &graph, int start, int destination)
 {
     map<int,int> distances = DijkstrasAlgorithm(graph, start);
 
