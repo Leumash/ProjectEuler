@@ -14,8 +14,10 @@
  */
 
 #include <iostream>
+#include <vector>
 #include <cmath>
 #include <set>
+#include <cstring>
 
 using namespace std;
 
@@ -33,38 +35,24 @@ class PrimeTester
         int currentLargestPrime;
 };
 
-int GetNumberOfDistinctPrimeFactors(int n)
+int GetAnswer(int sieveSize, int n)
 {
     static PrimeTester primeTester;
-    int currentPrime = 2;
-    int numberOfDistinctPrimeFactors = 0;
+    vector<int> arr(sieveSize, 0);
 
-    while (n > 1)
+    for (int currentPrime = 2; currentPrime < sieveSize; currentPrime = primeTester.GetNextPrime(currentPrime))
     {
-        if (n % currentPrime == 0)
+        for (int i=1; i*currentPrime < sieveSize; ++i)
         {
-            ++numberOfDistinctPrimeFactors;
-
-            while (n % currentPrime == 0)
-            {
-                n /= currentPrime;
-            }
+            ++arr[i*currentPrime];
         }
-
-        currentPrime = primeTester.GetNextPrime(currentPrime);
     }
 
-    return numberOfDistinctPrimeFactors;
-}
-
-int DoIt(int n)
-{
     int consecutiveIntegersWithNDistinctPrimeFactors = 0;
-    for (int i=2; ; ++i)
-    {
-        int numberOfDistinctPrimeFactors = GetNumberOfDistinctPrimeFactors(i);
 
-        if (numberOfDistinctPrimeFactors == n)
+    for (int i=2; i<sieveSize; ++i)
+    {
+        if (arr[i] == n)
         {
             ++consecutiveIntegersWithNDistinctPrimeFactors;
         }
@@ -76,6 +64,24 @@ int DoIt(int n)
         if (consecutiveIntegersWithNDistinctPrimeFactors == n)
         {
             return i - (n - 1);
+        }
+    }
+
+    return -1;
+}
+
+int DoIt(int n)
+{
+    int sieveSize;
+    for (int i=1; ; ++i)
+    {
+        sieveSize = pow(10, i);
+
+        int answer = GetAnswer(sieveSize, n);
+
+        if (answer > 0)
+        {
+            return answer;
         }
     }
 }
