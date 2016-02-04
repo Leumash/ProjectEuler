@@ -31,9 +31,55 @@ There are 9! possible combinations: 362880
 
 using namespace std;
 
-vector<int> GetDecreasingPandigitalNumbers()
+bool IsConcatenatedProduct(int n, int frontNumber)
 {
-    vector<int> toReturn;
+    for (int multiplier = 1; ; ++multiplier)
+    {
+        int front = multiplier * frontNumber;
+        int digitsOfN = floor(log10(n)) + 1;
+        int digitsOfFront = floor(log10(front)) + 1;
+        int divider = pow(10, digitsOfN - digitsOfFront);
+
+        if (digitsOfN < digitsOfFront)
+        {
+            return false;
+        }
+
+        // Check if equal
+
+        if (front != n / divider)
+        {
+            return false;
+        }
+
+        // modify n
+
+        n %= divider;
+
+        if (n == 0)
+        {
+            return true;
+        }
+    }
+}
+
+bool IsConcatenatedProduct(int n)
+{
+    for (int digits = 8; digits >= 4; --digits)
+    {
+        int frontNumber = n / (int) pow(10,digits);
+
+        if (IsConcatenatedProduct(n, frontNumber))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+int GetLargestNineDigitalPandigitalNumber()
+{
     vector<int> permutations;
 
     permutations.push_back(9);
@@ -55,34 +101,16 @@ vector<int> GetDecreasingPandigitalNumbers()
             ss << num;
         }
 
-        int toInsert;
+        int pandigitalNumber;
 
-        ss >> toInsert;
+        ss >> pandigitalNumber;
 
-        toReturn.push_back(toInsert);
-
-    } while (prev_permutation(permutations.begin(), permutations.end()));
-
-    return toReturn;
-}
-
-bool IsConcatenatedProduct(int n)
-{
-    //int frontNumber = n / 100000000;
-    //int frontNumber = n / (int) pow(10,8);
-}
-
-int GetLargestNineDigitalPandigitalNumber()
-{
-    vector<int> decreasingPandigitalNumbers = GetDecreasingPandigitalNumbers();
-
-    for (int pandigitalNumber : decreasingPandigitalNumbers)
-    {
         if (IsConcatenatedProduct(pandigitalNumber))
         {
-            return pandigitalNumber;
+            return true;
         }
-    }
+
+    } while (prev_permutation(permutations.begin(), permutations.end()));
 
     return -1;
 }
