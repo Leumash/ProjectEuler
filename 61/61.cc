@@ -25,7 +25,10 @@ Find the sum of the only ordered set of six cyclic 4-digit numbers for which eac
 
 #include <iostream>
 #include <vector>
+#include <limits>
+#include <algorithm>
 #include <unordered_set>
+#include <queue>
 #include <unordered_map>
 #include <numeric>
 
@@ -229,6 +232,194 @@ vector<int> GetFigurateNumbers(int (*figurateFunction)(int), int desiredDigits)
     return figurateNumbers;
 }
 
+struct Edge
+{
+    int vertex;
+    int weight;
+    Edge(int v, int w) : vertex(v), weight(w) {}
+};
+
+class WeightedGraph
+{
+    public:
+        void AddVertex(int vertex);
+        void AddEdge(int s, int t, int weight);
+        vector<Edge> GetEdges(int vertex) const;
+        void UpdateEdge(int s, int t, int toAdd);
+        int GetEdgeWeight(int s, int t) const;
+    private:
+        unordered_map<int,vector<Edge>> adjacencyList;
+};
+
+vector<Edge> WeightedGraph::GetEdges(int vertex) const
+{
+    if (adjacencyList.count(vertex) > 0)
+    {
+        return adjacencyList.at(vertex);
+    }
+
+    return vector<Edge>();
+}
+
+void WeightedGraph::UpdateEdge(int s, int t, int toAdd)
+{
+    if (adjacencyList.count(s) > 0)
+    {
+        for (Edge &edge : adjacencyList.at(s))
+        {
+            if (edge.vertex == t)
+            {
+                edge.weight += toAdd;
+            }
+        }
+    }
+}
+
+int WeightedGraph::GetEdgeWeight(int s, int t) const
+{
+    if (adjacencyList.count(s) > 0)
+    {
+        for (const Edge &edge : adjacencyList.at(s))
+        {
+            if (edge.vertex == t)
+            {
+                return edge.weight;
+            }
+        }
+    }
+}
+
+void WeightedGraph::AddVertex(int vertex)
+{
+    if (adjacencyList.count(vertex) == 0)
+    {
+        adjacencyList[vertex] = vector<Edge>();
+    }
+}
+
+void WeightedGraph::AddEdge(int s, int t, int weight)
+{
+    if (adjacencyList.count(s) > 0 && adjacencyList.count(t) > 0)
+    {
+        adjacencyList[s].push_back(Edge(t,weight));
+    }
+}
+
+WeightedGraph MakeFlowNetwork(const vector<int> &setOfNumbers, const vector<unordered_set<int>> &sets, int &source, int &sink)
+{
+    // 0 < setOfNumbers.size() are vertice numbers for setOfNumbers
+    // setOfNumbers.size() -> sets.size() are vertice numbers for sets
+    source = setOfNumbers.size() + sets.size();
+    sink = setOfNumbers.size() + sets.size() + 1;
+    WeightedGraph graph;
+
+    // Add vertices
+    graph.AddVertex(source);
+    graph.AddVertex(sink);
+
+    for (int i=0; i<setOfNumbers.size(); ++i)
+    {
+        graph.AddVertex(i);
+    }
+
+    for (int i=setOfNumbers.size(); i<setOfNumbers.size() + sets.size(); ++i)
+    {
+        graph.AddVertex(i);
+    }
+
+    // Add edges
+    for (int i=0; i<setOfNumbers.size(); ++i)
+    {
+        for (int j=0; j<sets.size(); ++j)
+        {
+            if (sets[j].count(setOfNumbers[i]) > 0)
+            {
+                graph.AddEdge(i, j + setOfNumbers.size(), 1);
+            }
+        }
+    }
+
+    // Add source -> setOfNumbers
+    for (int i=0; i<setOfNumbers.size(); ++i)
+    {
+        graph.AddEdge(source, i, 1);
+    }
+
+    // Add sets -> sink
+    for (int i=setOfNumbers.size(); i<setOfNumbers.size() + sets.size(); ++i)
+    {
+        graph.AddEdge(i, sink, 1);
+    }
+
+    return graph;
+}
+
+int GetMinimumPathFlow(const WeightedGraph &graph, int s, int t, const unordered_map<int,int> &parent)
+{
+    int minimumPathFlow = numeric_limits<int>::max();
+
+    for (int v=t; v!=s; v = parent.at(v))
+    {
+        int u = parent.at(v);
+
+        minimumPathFlow = min(minimumPathFlow, graph.GetEdgeWeight(u,v));
+    }
+
+    return minimumPathFlow;
+}
+
+bool BFS(const WeightedGraph &graph, int s, int t, unordered_map<int,int> &parent)
+{
+    parent.clear();
+
+    unordered_set<int> visited;
+    queue<int> toVisit;
+
+    visited.insert(s);
+    toVisit.push(s);
+
+    while (!toVisit.empty())
+    {
+        int currentVertex = toVisit.front();
+        toVisit.pop();
+
+        for (const Edge &edge : graph.GetEdges(currentVertex))
+        {
+            if (visited.count(edge.vertex) == 0 && edge.weight > 0)
+            {
+                visited.insert(edge.vertex);
+                toVisit.push(edge.vertex);
+                parent[edge.vertex] = currentVertex;
+            }
+        }
+    }
+
+    return parent.count(t) > 0;
+}
+
+int FordFulkersonAlgorithm(WeightedGraph &graph, int s, int t)
+{
+    int maximumFlow = 0;
+    unordered_map<int,int> parent;
+
+    while (BFS(graph, s, t, parent))
+    {
+        int minimumPathFlow = GetMinimumPathFlow(graph, s, t, parent);
+
+        for (int v=t; v != s; v = parent[v])
+        {
+            int u = parent[v];
+
+            graph.UpdateEdge(u,v, -minimumPathFlow);
+            graph.UpdateEdge(v,u, minimumPathFlow);
+        }
+
+        maximumFlow += minimumPathFlow;
+    }
+
+    return maximumFlow;
+}
+
 bool DoesFitUniquelyIntoEachSet(vector<int> setOfNumbers, vector<unordered_set<int>> sets)
 {
     if (setOfNumbers.size() == 1)
@@ -236,27 +427,11 @@ bool DoesFitUniquelyIntoEachSet(vector<int> setOfNumbers, vector<unordered_set<i
         return sets[0].count(setOfNumbers[0]) > 0;
     }
 
-    for (int i=0; i<setOfNumbers.size(); ++i)
-    {
-        for (int j=0; j<sets.size(); ++j)
-        {
-            if (sets[j].count(setOfNumbers[i]) > 0)
-            {
-                vector<int> tempSetOfNumbers(setOfNumbers);
-                vector<unordered_set<int>> tempSets(sets);
+    int source, sink;
 
-                tempSetOfNumbers.erase(tempSetOfNumbers.begin() + i);
-                tempSets.erase(tempSets.begin() + j);
+    WeightedGraph flowNetwork = MakeFlowNetwork(setOfNumbers, sets, source, sink);
 
-                if (DoesFitUniquelyIntoEachSet(tempSetOfNumbers, tempSets))
-                {
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
+    return FordFulkersonAlgorithm(flowNetwork, source, sink) == min(setOfNumbers.size(), sets.size());
 }
 
 vector<int> GetSetWithANumberInEachSet(const auto &setsOfNumbers, const auto &x1, const auto &x2, const auto &x3, const auto &x4, const auto &x5, const auto &x6)
