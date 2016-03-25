@@ -14,24 +14,22 @@ Find the smallest member of the longest amicable chain with no element exceeding
 
 #include <iostream>
 #include <vector>
-#include <unordered_set>
-#include <unordered_map>
 #include <algorithm>
 
 using namespace std;
 
-pair<int,int> GetSmallestMemberAndLength(int n, unordered_set<int> &processed, int maxNumber, const vector<int> &numberToSumOfDivisors)
+pair<int,int> GetSmallestMemberAndLength(int n, vector<bool> &processed, int maxNumber, const vector<int> &numberToSumOfDivisors)
 {
     bool invalidCondition = false;
-    unordered_set<int> membersInChain;
+    vector<int> membersInChain;
 
-    while (membersInChain.count(n) == 0)
+    while (find(membersInChain.begin(), membersInChain.end(), n) == membersInChain.end())
     {
-        membersInChain.insert(n);
+        membersInChain.push_back(n);
 
         n = numberToSumOfDivisors.at(n);
 
-        if (n > maxNumber || n == 1 || processed.count(n) > 0)
+        if (n > maxNumber || n == 1 || processed[n])
         {
             invalidCondition = true;
             break;
@@ -40,7 +38,7 @@ pair<int,int> GetSmallestMemberAndLength(int n, unordered_set<int> &processed, i
 
     for (int element : membersInChain)
     {
-        processed.insert(element);
+        processed[element] = true;
     }
 
     if (invalidCondition)
@@ -50,9 +48,9 @@ pair<int,int> GetSmallestMemberAndLength(int n, unordered_set<int> &processed, i
 
     membersInChain.clear();
 
-    while (membersInChain.count(n) == 0)
+    while (find(membersInChain.begin(), membersInChain.end(), n) == membersInChain.end())
     {
-        membersInChain.insert(n);
+        membersInChain.push_back(n);
 
         n = numberToSumOfDivisors.at(n);
     }
@@ -60,38 +58,38 @@ pair<int,int> GetSmallestMemberAndLength(int n, unordered_set<int> &processed, i
     return make_pair(*min_element(membersInChain.begin(), membersInChain.end()), membersInChain.size());
 }
 
-vector<int> GetNumberToSumOfDivisors(int maxNumber)
+void GetNumberToSumOfDivisors(int maxNumber, vector<int> &numberToSumOfDivisors)
 {
-    vector<int> numberToSumOfDivisors(maxNumber + 1);
+    numberToSumOfDivisors.resize(maxNumber + 1);
 
-    for (int i=1; i<=maxNumber; ++i)
+    for (int i=2; i<=maxNumber; ++i)
     {
         numberToSumOfDivisors[i] = 1;
     }
 
-    for (int divisor=2; divisor<=maxNumber; ++divisor)
+    for (int divisor=2; divisor<=maxNumber/2; ++divisor)
     {
         for (int multiplier=2; multiplier*divisor <= maxNumber; ++multiplier)
         {
             numberToSumOfDivisors[multiplier * divisor] += divisor;
         }
     }
-
-    return numberToSumOfDivisors;
 }
 
 int GetSmallestMemberOfLongestAmicableChain(int maxElement)
 {
     int smallestMember = 0;
     int longestLength = 0;
-    unordered_set<int> processed;
-    vector<int> numberToSumOfDivisors = GetNumberToSumOfDivisors(maxElement);
+    vector<bool> processed(maxElement + 1, false);
+    vector<int> numberToSumOfDivisors;
 
-    processed.insert(1);
+    GetNumberToSumOfDivisors(maxElement, numberToSumOfDivisors);
 
-    for (int i=1; i<=maxElement; ++i)
+    processed[1] = true;
+
+    for (int i=2; i<=maxElement; ++i)
     {
-        if (processed.count(i) > 0)
+        if (processed[i])
         {
             continue;
         }
