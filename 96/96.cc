@@ -27,6 +27,7 @@ By solving all fifty puzzles find the sum of the 3-digit numbers found in the to
 #include <fstream>
 #include <unordered_set>
 #include <limits>
+#include <algorithm>
 
 #define SIZE_OF_ROW 3
 #define SIZE_OF_COLUMN 3
@@ -34,7 +35,7 @@ By solving all fifty puzzles find the sum of the 3-digit numbers found in the to
 using namespace std;
 
 typedef vector<vector<int>> boardType;
-typedef vector<vector<unordered_set<int>>> possibilityType;
+typedef vector<vector<vector<int>>> possibilityType;
 
 vector<vector<vector<int>>> GetSudokuGrids()
 {
@@ -98,7 +99,7 @@ bool GetUnFilledCell(const boardType &sudokuGrid, int &rowPos, int &colPos)
 
 possibilityType MakeInitialPossibilites()
 {
-    possibilityType toReturn(SIZE_OF_ROW * SIZE_OF_COLUMN, vector<unordered_set<int>>(SIZE_OF_ROW * SIZE_OF_COLUMN));
+    possibilityType toReturn(SIZE_OF_ROW * SIZE_OF_COLUMN, vector<vector<int>>(SIZE_OF_ROW * SIZE_OF_COLUMN));
 
     for (int row=0; row<SIZE_OF_ROW * SIZE_OF_COLUMN; ++row)
     {
@@ -106,7 +107,7 @@ possibilityType MakeInitialPossibilites()
         {
             for (int i=1; i<=SIZE_OF_ROW * SIZE_OF_COLUMN; ++i)
             {
-                toReturn[row][col].insert(i);
+                toReturn[row][col].push_back(i);
             }
         }
     }
@@ -117,7 +118,6 @@ possibilityType MakeInitialPossibilites()
 possibilityType GetPossibilites(const boardType &sudokuGrid)
 {
     possibilityType possibilities = MakeInitialPossibilites();
-    //(9, vector<unordered_set<int>>(9, {1,2,3,4,5,6,7,8,9}));
 
     for (int row=0; row<SIZE_OF_ROW * SIZE_OF_COLUMN; ++row)
     {
@@ -128,22 +128,21 @@ possibilityType GetPossibilites(const boardType &sudokuGrid)
             // Erase from Rows
             for (int rowPrime=0; rowPrime<SIZE_OF_ROW * SIZE_OF_COLUMN; ++rowPrime)
             {
-                possibilities[rowPrime][col].erase(notAPossbility);
+                possibilities[rowPrime][col].erase(remove(possibilities[rowPrime][col].begin(), possibilities[rowPrime][col].end(), notAPossbility), possibilities[rowPrime][col].end());
             }
 
             // Erase from Cols
             for (int colPrime=0; colPrime<SIZE_OF_ROW * SIZE_OF_COLUMN; ++colPrime)
             {
-                possibilities[row][colPrime].erase(notAPossbility);
+                possibilities[row][colPrime].erase(remove(possibilities[row][colPrime].begin(), possibilities[row][colPrime].end(), notAPossbility), possibilities[row][colPrime].end());
             }
 
             // Erase from Square
-
-            for (int rowPrime = row - (row % SIZE_OF_ROW); rowPrime<SIZE_OF_ROW; ++rowPrime)
+            for (int rowPrime = row - (row % SIZE_OF_ROW); rowPrime<SIZE_OF_ROW + row - (row % SIZE_OF_ROW) ; ++rowPrime)
             {
-                for (int colPrime = col - (col % SIZE_OF_COLUMN); colPrime<SIZE_OF_COLUMN; ++colPrime)
+                for (int colPrime = col - (col % SIZE_OF_COLUMN); colPrime<SIZE_OF_COLUMN + col - (col % SIZE_OF_COLUMN); ++colPrime)
                 {
-                    possibilities[rowPrime][colPrime].erase(notAPossbility);
+                    possibilities[rowPrime][colPrime].erase(remove(possibilities[rowPrime][colPrime].begin(), possibilities[rowPrime][colPrime].end(), notAPossbility), possibilities[rowPrime][colPrime].end());
                 }
             }
         }
@@ -152,20 +151,35 @@ possibilityType GetPossibilites(const boardType &sudokuGrid)
     return possibilities;
 }
 
-bool SolveRecursive(boardType sudokuGrid, boardType &solution)
+void RemovePossibilites(const possibilityType &oldPossib, possibilityType &newPossib, int changedTo, int row, int col)
+{
+    newPossib = oldPossib;
+
+    // Remove from Row
+    for (int rowPos=0; rowPos<SIZE_OF_ROW * SIZE_OF_COLUMN; ++rowPos)
+    {
+        newPossib[rowPos][col].erase(remove(newPossib[rowPos][col].begin(), newPossib[rowPos][col].end(), changedTo), newPossib[rowPos][col].end());
+    }
+
+    // Remove from Col
+    for (int colPos=0; colPos<SIZE_OF_ROW * SIZE_OF_COLUMN; ++colPos)
+    {
+        newPossib[row][colPos].erase(remove(newPossib[row][colPos].begin(), newPossib[row][colPos].end(), changedTo), newPossib[row][colPos].end());
+    }
+
+    // Erase from Square
+    for (int rowPrime = row - (row % SIZE_OF_ROW); rowPrime<SIZE_OF_ROW + row - (row % SIZE_OF_ROW) ; ++rowPrime)
+    {
+        for (int colPrime = col - (col % SIZE_OF_COLUMN); colPrime<SIZE_OF_COLUMN + col - (col % SIZE_OF_COLUMN); ++colPrime)
+        {
+            newPossib[rowPrime][colPrime].erase(remove(newPossib[rowPrime][colPrime].begin(), newPossib[rowPrime][colPrime].end(), changedTo), newPossib[rowPrime][colPrime].end());
+        }
+    }
+}
+
+bool SolveRecursive(boardType sudokuGrid, possibilityType possibilities, boardType &solution)
 {
     int row, col;
-    /*
-
-    if (!GetUnFilledCell(sudokuGrid, row, col))
-    {
-        solution = sudokuGrid;
-
-        return true;
-    }
-    */
-
-    possibilityType possibilities = GetPossibilites(sudokuGrid);
 
     unsigned int numberOfPossbilities = numeric_limits<int>::max();
 
@@ -189,19 +203,22 @@ bool SolveRecursive(boardType sudokuGrid, boardType &solution)
         return false;
     }
 
-    /*
-    if (possibilities[row][col].size() == 0)
+    if (numberOfPossbilities == numeric_limits<int>::max())
     {
-        return false;
+        solution = sudokuGrid;
+
+        return true;
     }
-    */
-    cout <<"HI" << endl;
 
     for (int possibility : possibilities[row][col])
     {
         sudokuGrid[row][col] = possibility;
 
-        if (SolveRecursive(sudokuGrid, solution))
+        possibilityType newPossibilities;
+
+        RemovePossibilites(possibilities, newPossibilities, possibility, row, col);
+
+        if (SolveRecursive(sudokuGrid, newPossibilities, solution))
         {
             return true;
         }
@@ -212,26 +229,19 @@ bool SolveRecursive(boardType sudokuGrid, boardType &solution)
 
 vector<vector<int>> SolveWithBruteForce(vector<vector<int>> sudokuGrid)
 {
+    possibilityType possbilities = GetPossibilites(sudokuGrid);
 
-    if (!SolveRecursive(sudokuGrid, sudokuGrid))
+    if (!SolveRecursive(sudokuGrid, possbilities, sudokuGrid))
     {
         cout << "No solution?" << endl;
         exit (1);
     }
-
-    // i want to pick a number, put in on the board, then see if it's solvable.
-        // if solvable place the number?
-        // else go to next number
 
     return sudokuGrid;
 }
 
 vector<vector<int>> SolveSudokuGrid(vector<vector<int>> &sudokuGrid)
 {
-    // sudokuGrid = ApplyMustExistHereTechnique(sudokuGrid);
-
-    // TODO: Add more techniques?
-
     sudokuGrid = SolveWithBruteForce(sudokuGrid);
 
     return sudokuGrid;
@@ -240,24 +250,7 @@ vector<vector<int>> SolveSudokuGrid(vector<vector<int>> &sudokuGrid)
 int GetSumOfTopLeftCorners()
 {
     vector<vector<vector<int>>> sudokuGrids = GetSudokuGrids();
-
-    boardType answer = SolveSudokuGrid(sudokuGrids[0]);
-
-    for (auto a : answer)
-    {
-        for (int b : a)
-        {
-            cout << b <<' ';
-        }
-
-        cout << endl;
-    }
-
-    cout << endl;
-
-    return 0;
-    // FIXME
-
+    
     for (auto &sudokuGrid : sudokuGrids)
     {
         sudokuGrid = SolveSudokuGrid(sudokuGrid);
